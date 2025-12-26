@@ -1220,7 +1220,7 @@ export default function App() {
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 text-blue-600">
             <BarChart3 className="w-6 h-6" />
-            <h1 className="text-xl font-bold tracking-tight">TimeGantt</h1>
+            <h1 className="text-xl font-bold tracking-tight">BA-chart</h1>
           </div>
           <div className="h-6 w-px bg-gray-300 mx-2"></div>
           <input 
