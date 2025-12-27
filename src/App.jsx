@@ -97,6 +97,7 @@ const generateNSBars = (nsConfig, totalTime) => {
   const safeGap = Math.max(gap, 0.1); 
   const safeDuration = Math.max(duration, 0.001);
   const maxTimeLimit = totalTime * 2;
+  // 安全のための上限設定
   const maxBars = 1000; 
 
   let index = 0;
@@ -375,6 +376,7 @@ const GanttChartRow = React.memo(({ task, totalDuration, dragState, onMouseDown,
               const isDraggingThis = dragState?.type === 'ex' && dragState?.taskId === task.id && dragState?.subId === block.id;
               
               const displayStart = isDraggingThis ? dragState.currentStart : block.start;
+              // 表示時間: ドラッグ中は元の時間を維持
               const displayTimeStart = isDraggingThis ? dragState.originalStart : block.start;
               
               const castTime = block.castTime || 0;
@@ -735,20 +737,17 @@ export default function App() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [zoomIndex, setZoomIndex] = useState(0); // ズームレベル管理
   
-  // チャート領域の高さを管理するState
-  const [chartHeightPercent, setChartHeightPercent] = useState(50);
-  const [isResizing, setIsResizing] = useState(false);
-  const containerRef = useRef(null);
-  
-  // パン操作用のState
-  const [isPanning, setIsPanning] = useState(false);
+  // チャート領域の高さを管理するState	const currentZoom = useMemo(() => ZOOM_LEVELS[zoomIndex], [zoomIndex]);
+  const [chartHeightPercent, setChartHeightPercent] = useState(50);	
+  const [isResizing, setIsResizing] = useState(false);	
+  const containerRef = useRef(null);	
+  // パン操作用のState	
+  const [isPanning, setIsPanning] = useState(false);	
   const [panStart, setPanStart] = useState({ x: 0, scrollLeft: 0 });
-
-  const chartRef = useRef(null);
-  const headerRef = useRef(null);
-  const [dragState, setDragState] = useState(null);
-
-  const currentZoom = useMemo(() => ZOOM_LEVELS[zoomIndex], [zoomIndex]);
+  const chartRef = useRef(null);	
+  const headerRef = useRef(null);	
+  const [dragState, setDragState] = useState(null);	
+  const currentZoom = useMemo(() => ZOOM_LEVELS[zoomIndex], [zoomIndex]);	
   const overlaps = useMemo(() => calculateExOverlaps(tasks, totalDuration), [tasks, totalDuration]);
 
   // 初期データ (不要な mode, shifts を削除)
@@ -803,7 +802,7 @@ export default function App() {
     },
   ], []);
 
-  // リサイズ処理
+// リサイズ処理
   const startResizing = useCallback(() => setIsResizing(true), []);
   const stopResizing = useCallback(() => setIsResizing(false), []);
 
@@ -902,7 +901,7 @@ export default function App() {
     }
   }, [totalDuration, chartTitle, tasks, isLoaded]);
 
-  // 編集中のバー情報
+  // 編集中のバー情報: { taskId, type, subId, currentTime }
   const [editingBar, setEditingBar] = useState(null);
   
   const tasksRef = useRef(tasks);
@@ -911,6 +910,8 @@ export default function App() {
   // モーダル状態
   const [showImportModal, setShowImportModal] = useState(false);
   const [showOutputModal, setShowOutputModal] = useState(false);
+  const [outputText, setOutputText] = useState('');
+  const [copied, setCopied] = useState(false);
 
   // --- ハンドラー ---
 
@@ -982,6 +983,7 @@ export default function App() {
     }));
   }, [totalDuration]);
 
+  // EX: 固有2のトグルハンドラ
   const toggleExUnique2 = useCallback((taskId, blockId) => {
     setTasks(prev => prev.map(task => {
       if (task.id === taskId) {
@@ -1005,6 +1007,7 @@ export default function App() {
     setTasks(prev => prev.map(task => {
       if (task.id === taskId) {
         let safeVal = value;
+        // 単純な数値変換のみ
         let val = parseFloat(value);
         if (isNaN(val)) val = 0;
         
@@ -1027,6 +1030,7 @@ export default function App() {
     }));
   }, [totalDuration]);
 
+  // NS: 固有2のトグルハンドラ
   const toggleNsUnique2 = useCallback((taskId) => {
     setTasks(prev => prev.map(task => {
       if (task.id === taskId) {
@@ -1071,6 +1075,7 @@ export default function App() {
         const block = task.ex.find(b => b.id === subId);
         startValue = block ? block.start : 0;
     } else {
+        // NS (全遅延のみ: Start)
         startValue = task.ns.start;
     }
 
@@ -1090,8 +1095,10 @@ export default function App() {
     }
 
     animationFrameRef.current = requestAnimationFrame(() => {
+        // ズーム時の幅計算
         const scrollContainer = chartRef.current;
         const visibleWidth = scrollContainer.getBoundingClientRect().width;
+        // スクロールコンテナ内の実際のコンテンツ幅を取得
         const innerDiv = scrollContainer.firstElementChild;
         const actualWidth = innerDiv ? innerDiv.getBoundingClientRect().width : visibleWidth;
 
@@ -1130,10 +1137,13 @@ export default function App() {
         }));
 
     } else {
+        // NS (全遅延): 開始時間を更新
         const task = tasksRef.current.find(t => t.id === taskId);
         if (task) {
-            const barIndex = subId; 
+            const barIndex = subId; // NSの場合subIdにindexが入っている
             const gap = task.ns.gap || 30;
+            
+            // 全体の開始時間 = 現在のバー位置 - (index * gap)
             let newStart = currentStart - (barIndex * gap);
             newStart = Math.max(MIN_ELAPSED_TIME, newStart);
             updateNsConfig(taskId, 'start', newStart);
@@ -1143,6 +1153,7 @@ export default function App() {
     setDragState(null);
   }, [dragState, updateNsConfig, totalDuration]);
 
+  // アニメーションフレーム参照
   const animationFrameRef = useRef(null);
 
   useEffect(() => {
@@ -1169,7 +1180,7 @@ export default function App() {
     }
   };
 
-  // データインポート (テキスト形式のみ)
+  // データインポート
   const handleImport = (event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -1182,6 +1193,7 @@ export default function App() {
       if (lines.length > 0) {
         if (window.confirm(`${lines.length}件のタスクリストを読み込みますか？(新規作成)`)) {
             const importedTasks = lines.map((line, index) => {
+                // カンマ区切りでパース
                 const parts = line.split(',').map(p => p.trim());
                 
                 const name = parts[0] || `Task ${index + 1}`;
@@ -1224,8 +1236,8 @@ export default function App() {
 
   const generateOutput = () => {
     const lines = [];
-    lines.push(chartTitle); 
-    lines.push(''); 
+    lines.push(chartTitle); // チャート名
+    lines.push(''); // 空行
     
     const allEvents = [];
     
@@ -1342,12 +1354,11 @@ export default function App() {
       {/* Main Content Area (Vertical Split) */}
       <div className="flex flex-1 flex-col overflow-hidden">
         
-        {/* 1. Chart Area */}
-        <div 
-          className="flex-none flex flex-col bg-slate-50/50 relative border-b border-gray-200 shrink-0" 
-          style={{ height: `${chartHeightPercent}%`, minHeight: '20%', maxHeight: '80%' }}
-          onMouseDown={handleChartMouseDown}
-        >
+        {/* 1. Chart Area (Top, Auto height to fit content) */}
+        <div className="flex-none flex flex-col bg-slate-50/50 relative border-b-4 border-gray-200 shrink-0" 
+          style={{ height: `${chartHeightPercent}%`, minHeight: '20%', maxHeight: '60%' }}
+          onMouseDown={handleChartMouseDown}>
+        
            
            {/* Chart Header (Scale) - Scroll synced */}
            <div ref={headerRef} className="h-8 bg-white border-b border-gray-200 flex shrink-0 select-none overflow-hidden">
@@ -1378,10 +1389,7 @@ export default function App() {
            </div>
 
            {/* Chart Body - Scrollable */}
-           <div 
-             ref={chartRef} 
-             onScroll={handleScroll} 
-             className={`overflow-auto relative flex-1 ${isPanning ? 'cursor-grabbing' : (dragState ? 'cursor-grabbing' : 'cursor-grab')}`}
+           <div ref={chartRef} onScroll={handleScroll} className={`overflow-auto relative flex-1 ${isPanning ? 'cursor-grabbing' : (dragState ? 'cursor-grabbing' : 'cursor-grab')}`}
              style={{ height: 'auto' }}
            >
               <div style={{ width: `${currentZoom.scale * 100}%`, minWidth: '100%' }} className="relative min-h-full">
@@ -1407,7 +1415,7 @@ export default function App() {
               </div>
            </div>
         </div>
-
+        
         {/* Resizer Handle */}
         <div 
             className="h-2 bg-gray-100 border-y border-gray-300 cursor-row-resize flex items-center justify-center hover:bg-blue-50 transition-colors shrink-0 z-40 select-none group"
@@ -1416,8 +1424,8 @@ export default function App() {
             <div className="w-12 h-1 bg-gray-300 rounded-full group-hover:bg-blue-300 transition-colors"></div>
         </div>
 
-        {/* 2. Settings Area */}
-        <div className="flex-1 overflow-y-auto bg-white p-4 h-0 min-h-0">
+        {/* 2. Settings Area (Bottom, Scrollable) */}
+        <div className="flex-1 overflow-y-auto bg-white p-4" h-0 min-h-0>
            <div className="container mx-auto">
              
              {/* Grid Layout for Panels */}
@@ -1469,8 +1477,7 @@ export default function App() {
                 </div>
                 <p className="mt-2 text-xs text-gray-500">
                    ※ 1行につき1つのタスクとして読み込まれます。<br/>
-                   ※ カンマ(,)で区切って数値を指定してください。省略時はデフォルト値が適用されます。<br/>
-                   ※ 2つ目以降の数値はNS(繰り返し)の設定値として読み込まれます。
+                   ※ カンマ(,)で区切って数値を指定してください。省略時はデフォルト値が適用されます。
                 </p>
               </div>
 
