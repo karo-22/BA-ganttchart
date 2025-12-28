@@ -13,7 +13,7 @@ const STORAGE_KEY = 'time-gantt-data-v1'; // LocalStorageのキー
 const UNIQUE_FACTOR = 1.19; // 固有時間の倍率係数
 
 const TIME_OPTIONS = [
-  { label: '3分30秒', value: 210 },
+  { label: '3分00秒', value: 180 },
   { label: '4分00秒', value: 240 },
   { label: '4分30秒', value: 270 },
 ];
@@ -731,7 +731,7 @@ const TaskControlPanel = React.memo(({
 // --- Main Component ---
 
 export default function App() {
-  const [totalDuration, setTotalDuration] = useState(210);
+  const [totalDuration, setTotalDuration] = useState(180);
   const [chartTitle, setChartTitle] = useState('チャート1');
   const [tasks, setTasks] = useState([]);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -869,7 +869,7 @@ export default function App() {
         const savedData = window.localStorage.getItem(STORAGE_KEY);
         if (savedData) {
           const parsed = JSON.parse(savedData);
-          setTotalDuration(parsed.totalDuration || 210);
+          setTotalDuration(parsed.totalDuration || 180);
           setChartTitle(parsed.chartTitle || 'チャート1');
           if (parsed.tasks && parsed.tasks.length > 0) {
             setTasks(parsed.tasks);
@@ -1273,7 +1273,7 @@ export default function App() {
   const resetData = () => {
     if (window.confirm('全てのデータを初期状態に戻しますか？')) {
         setTasks(initialTasks);
-        setTotalDuration(210);
+        setTotalDuration(180);
     }
   };
 
